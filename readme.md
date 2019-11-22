@@ -1,4 +1,3 @@
-cmcdbg
 
 About
 =====
