@@ -69,6 +69,7 @@ def keychainz():
     exit()
 
 def main(argv):
+    load_dotenv()
     try:
         opts,args = getopt.getopt(sys.argv[1:], 'k')
     except Exception as err_msg:
@@ -78,16 +79,19 @@ def main(argv):
         if opt in ('-k', '--keychain'):
             keychainz()
     challengeString = []
+
     if os.getenv('ts'):
         ts = os.getenv('ts').split(':')
+        print("Loaded servers %s from env: %s" % (len(ts), ts))
     else:
         ts = input("Server: ")
     server = ts[randint(0,len(ts)-1)]
+    print('Selected server: %s' % server)
     user = os.getlogin()
     print("ctrl+c to end input.\nInput challenge: ")
     while True:
         try:
-            line = raw_input()
+            line = input()
         except KeyboardInterrupt:
             break
         else:
@@ -112,4 +116,3 @@ def main(argv):
 
 if __name__=="__main__":
     main(sys.argv[1:])
-    load_dotenv()
