@@ -7,6 +7,7 @@ Keychain can be optionally used. Depending on the platform, passwords will be sa
 
 Usage
 =====
+Requires [chromedriver[(https://chromedriver.chromium.org/) to be installed
 A list of servers can be stored in '.env' as variable 'ts', multiple servers can be added by separating them with ':'.
 
 > ts=server1:1.1.1.1:server3.example.org
