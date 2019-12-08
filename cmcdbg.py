@@ -1,14 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import paramiko
 import os
 import re
 import getpass
 import time
 import sys
-import keyring
 import getopt
+import keychainz
+from getpass import getpass
 from random import randint
 from dotenv import load_dotenv
+
 
 def print_help():
     print("Tool written to extract the CIMC debug string and automatically format for the CID tool.")
@@ -22,8 +24,10 @@ def print_help():
         "VE5OVs8m+FwBFQ==\n"
         "DONE.\n"
         "********************************************************************************\n"
-        "2$^CSSH gwong2 to x.x.x.x")
+        "2$^CSSH gwong2 to x.x.x.x\n")
+    print('-k | --keychain:\tStores your password (Keychain on macOS or Windows Credential Locker on Windows)')
     print("\n\nctrl+c to end input.\nInput challenge: ")
+
 
 def get_challenge(challengeString):
     C1C2 = []
@@ -58,26 +62,32 @@ def send_command(server, user, passwd, C1, C2):
     ssh_recv_ready(channel)
     channel.send(passwd + "\n")
     output = ssh_recv_ready(channel)
-    if not re.search(r"Response String", output):
-        output = ssh_recv_ready(channel)
-    print(output)
+    while True:
+        try:
+            if not re.search(r"Response String", output.decode()):
+                output = ssh_recv_ready(channel)
+            else:
+                break
+        except TypeError:
+            pass
     ssh.close()
+    for line in output.decode().split('\n'):
+        if ' ~]$' not in line:
+            print(line)
 
-def keychainz():
-    keyring.set_password("cimcdebug", os.getlogin(), getpass.getpass(prompt="Password: "))
-    print("Saved in keyring!\nRestart script.\n")
-    exit()
 
 def main(argv):
     load_dotenv()
     try:
-        opts,args = getopt.getopt(sys.argv[1:], 'k')
+        opts,args = getopt.getopt(sys.argv[1:], 'hk', ['keychain', 'help'])
     except Exception as err_msg:
         print(err_msg)
         exit()
     for opt,arg in opts:
         if opt in ('-k', '--keychain'):
-            keychainz()
+            keychainz.set_creds(__file__)
+        elif opt in ('-h', '--help'):
+            print_help()
     challengeString = []
 
     if os.getenv('ts'):
@@ -97,18 +107,18 @@ def main(argv):
         else:
             if line == "":
                 continue
-            elif line.lower() == "help":
-                print_help()
+            elif line == "DONE.":
+                break
             else:
                 challengeString.append(line)
     C1, C2 = get_challenge(challengeString)
     print("\nssh %s@%s" % (user, server))
 
-    if keyring.get_password("cimcdebug", user):
-        passwd = keyring.get_password("cimcdebug", user)
+    if keychainz.get_creds(__file__):
+        passwd = keychainz.get_creds(__file__)
     else:
         try:
-            passwd = getpass.getpass(prompt="ctrl+c to exit\nPassword: ")
+            passwd = getpass(prompt="ctrl+c to exit\nPassword: ")
         except KeyboardInterrupt:
             exit()
     send_command(server, user, passwd, C1, C2)
