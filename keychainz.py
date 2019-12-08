@@ -5,7 +5,8 @@ import sys
 from getpass import getpass
 from keyring.errors import PasswordSetError
 
-def cleanPath(file):
+
+def clean_path(file):
     if re.search(r'^\./', file) and re.search(r'\.py$', file):
         file = file[2:len(file)-3]
     elif re.search(r'^\./', file):
@@ -16,8 +17,9 @@ def cleanPath(file):
         file = file
     return file
 
-def setCreds(file):
-    file = cleanPath(file)
+
+def set_creds(file):
+    file = clean_path(file)
     try:
         keyring.set_password(file, os.getlogin(), getpass(prompt="Password: "))
     except PasswordSetError as err_msg:
@@ -34,9 +36,10 @@ def setCreds(file):
     else:
         # Catch all if some unknown OS is compatible with keyring
         print("Saved to KWallet/Secret Service/etc.")
-    getCreds(file)
+    get_creds(file)
 
-def getCreds(file):
-    file = cleanPath(file)
+
+def get_creds(file):
+    file = clean_path(file)
     passwd = keyring.get_password(file, os.getlogin())
     return passwd
