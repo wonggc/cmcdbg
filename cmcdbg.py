@@ -50,16 +50,24 @@ def ssh_recv_ready(channel):
 def send_command(server, user, passwd, C1, C2):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    try:
-         ssh.connect(hostname=server, username=user, password=passwd)
-    except:
-        error = sys.exc_info()[0]
-        print(error)
+    while True:
+        try:
+            ssh.connect(hostname=server, username=user, password=passwd)
+            break
+        except paramiko.ssh.exception.AuthenticationException:
+            print("Check your password or try a different server.")
+            passwd = getpass("Password: ")
+        except:
+            error = sys.exc_info()[0]
+            print(error)
+    print(f"Logged into {server}")
     channel = ssh.invoke_shell()
     ssh_recv_ready(channel)
-    channel.send("/router/bin/ct_sign_client-1.0.1 -C1 %s -C2 %s -cec\n" % (C1, C2))
+    print("Sending challenge.")
+    channel.send(f"/router/bin/ct_sign_client-1.0.1 -C1 {C1} -C2 {C2} -cec\n")
     ssh_recv_ready(channel)
     channel.send(passwd + "\n")
+    print("Waiting for challenge response.")
     output = ssh_recv_ready(channel)
     while True:
         try:
@@ -91,11 +99,11 @@ def main(argv):
 
     if os.getenv('ts'):
         ts = os.getenv('ts').split(':')
-        print("Loaded servers %s from env: %s" % (len(ts), ts))
+        print(f"Loaded servers {len(ts)} from env: {ts}")
     else:
         ts = input("Server: ")
     server = ts[randint(0,len(ts)-1)]
-    print('Selected server: %s' % server)
+    print(f'Selected server: {server}')
     user = os.getlogin()
     print("ctrl+c to end input.\nInput challenge: ")
     while True:
@@ -111,7 +119,7 @@ def main(argv):
             else:
                 challengeString.append(line)
     C1, C2 = get_challenge(challengeString)
-    print("\nssh %s@%s" % (user, server))
+    print(f"\nssh {user}@{server}")
 
     if keychainz.get_creds(__file__):
         passwd = keychainz.get_creds(__file__)
