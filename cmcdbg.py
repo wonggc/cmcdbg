@@ -29,13 +29,18 @@ def print_help():
 
 def get_challenge(challengeString):
     C1C2 = []
-    for line in challengeString:
-        if re.search(r"^\*", line):
-            continue
-        elif re.search(r"^DONE\.", line):
-            break
-        else:
-            C1C2.append(line)
+    if len(challengeString) == 2 or (len(challengeString) == 3 and challengeString[-1] == 'DONE.'):
+        if len(challengeString[0]) == 64 and len(challengeString[1]) in (14,16):
+            C1C2.append(challengeString[0])
+            C1C2.append(challengeString[1])
+    else:
+        for line in challengeString:
+            if re.search(r"^\*", line):
+                continue
+            elif re.search(r"^DONE\.", line):
+                break
+            else:
+                C1C2.append(line)
     return C1C2
 
 
@@ -67,6 +72,7 @@ def init_channel(server, user, passwd):
     channel = ssh.invoke_shell()
     return channel
 
+
 def send_command(server, user, passwd, C1, C2):
     channel = init_channel(server, user, passwd)
     output = ssh_recv_ready(channel)
@@ -82,7 +88,7 @@ def send_command(server, user, passwd, C1, C2):
         else:
             output = ssh_recv_ready(channel)
             n = n+1
-    print('Sending challenge.')
+    print(f'Sending challenge: /router/bin/ct_sign_client-1.0.1 -C1 {C1} -C2 {C2} -cec')
     channel.send(f"/router/bin/ct_sign_client-1.0.1 -C1 {C1} -C2 {C2} -cec\n")
     output = ssh_recv_ready(channel)
     ready = False
@@ -118,6 +124,7 @@ def send_command(server, user, passwd, C1, C2):
     for line in output.decode().split('\n'):
         if ' ~]$' not in line:
             print(line)
+    print('\n')
 
 
 def main(argv):
@@ -143,21 +150,21 @@ def main(argv):
     server = ts[randint(0,len(ts)-1)]
     print(f'Selected server: {server}')
     user = os.getlogin()
-    print("ctrl+c to end input.\nInput challenge: ")
+    print("ctrl+c to end input. Including 'DONE.' also ends input (not required).\nInput challenge: ")
     while True:
         try:
             line = input()
         except KeyboardInterrupt:
             break
         else:
-            if line == "":
-                continue
-            elif line == "DONE.":
+            if line == "DONE.":
+                challengeString.append(line)
                 break
+            elif line.strip() == "" or len(line) < 14:
+                continue
             else:
                 challengeString.append(line)
     C1, C2 = get_challenge(challengeString)
-    #print(f"\nssh {user}@{server}")
 
     if keychainz.get_creds(__file__):
         passwd = keychainz.get_creds(__file__)
@@ -168,6 +175,7 @@ def main(argv):
             exit()
     send_command(server, user, passwd, C1, C2)
     exit()
+
 
 if __name__=="__main__":
     main(sys.argv[1:])
