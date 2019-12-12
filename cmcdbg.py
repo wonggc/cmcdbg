@@ -32,36 +32,38 @@ def print_help():
 def get_challenge(challengeString):
     C1C2 = []
     if len(challengeString) == 2 or (len(challengeString) == 3 and challengeString[-1] == 'DONE.'):
+        challengeString.sort(key=len, reverse=True)
         if len(challengeString[0]) == 64 and len(challengeString[1]) in range(14,17):
             C1C2.append(challengeString[0])
+            if len(challengeString[1]) in range (14, 16):
+                offset = 16-len(challengeString[1])
+                pad = "=" * offset
+                challengeString[1] = challengeString[1] + pad
             C1C2.append(challengeString[1])
             return C1C2
     else:
-        if "DONE." in challengeString:
-            dindex = challengeString.index('DONE.')
-            if len(challengeString[dindex-1]) in range(14,17) and len(challengeString[dindex-2]) == 64:
-                C1C2.append(challengeString[dindex-2])
-                C1C2.append(challengeString[dindex-1])
-                return C1C2
-        else:
-            for line in challengeString:
-                if len(C1C2) == 2:
-                    break
-                elif re.search(r"^\*", line):
-                    pass
-                elif ' ' in line:
-                    pass
-                elif len(line) == 64 or len(line) in range(14,17):
-                    if len(line) in range (14,16):
-                        offset = 16-len(line)
-                        pad = "=" * offset
-                        line = line+pad
-                    C1C2.append(line)
-            C1C2.sort(key=len, reverse=True)
-            if len(C1C2) == 2 and (len(C1C2[0]) == 64 and len(C1C2[1]) in range(14,17)):
-                 return C1C2
-        print(f"\nNo valid challenge string found.\n\t{C1C2}\n")
-        exit()
+        print(challengeString)
+        for sindex, line in reversed(list(enumerate(challengeString))):
+            if ' ' in line.strip():
+                del challengeString[sindex]
+         
+        for line in challengeString:
+            if len(C1C2) == 2:
+                break
+            elif re.search(r"^\*", line):
+                pass
+            elif len(line) == 64 or len(line) in range(14,17):
+                if len(line) in range (14,16):
+                    offset = 16-len(line)
+                    pad = "=" * offset
+                    line = line+pad
+                C1C2.append(line)
+        C1C2.sort(key=len, reverse=True)
+        if len(C1C2) == 2 and (len(C1C2[0]) == 64 and len(C1C2[1]) in range(14,17)):
+             return C1C2
+    print(C1C2)
+    print(f"\nNo valid challenge string found.\n\t{C1C2}\n")
+    exit()
 
 
 def ssh_recv_ready(channel):
@@ -156,8 +158,9 @@ def send_command(server, user, passwd, C1, C2):
 
 def main(argv):
     load_dotenv()
+    manual = False
     try:
-        opts,args = getopt.getopt(sys.argv[1:], 'hk', ['keychain', 'help'])
+        opts,args = getopt.getopt(sys.argv[1:], 'hkn', ['keychain', 'help', 'noclip'])
     except Exception as err_msg:
         print(err_msg)
         exit()
@@ -167,6 +170,8 @@ def main(argv):
         elif opt in ('-h', '--help'):
             print_help()
             exit()
+        elif opt in ('-n', '--noclip'):
+            manual = True
     challengeString = []
 
     if os.getenv('ts'):
@@ -177,9 +182,10 @@ def main(argv):
     server = ts[randint(0,len(ts)-1)]
     print(f'Selected server: {server}')
     user = os.getlogin()
-    if os.getenv('clipboard'):
-        input = pyperclip.paste()
-        for line in input.split('\n'):
+    print(manual)
+    if manual == False and os.getenv('clipboard'):
+        clippy = pyperclip.paste()
+        for line in clippy.split('\n'):
             line = line.strip(' "\'\t\r\n')
             if line == "DONE.":
                 if len(challengeString) < 2:
