@@ -18,30 +18,45 @@ def print_help():
         "Only two lines for the challenge string\n"
         "Logged in username is the same as your Domain username")
     print("Pasting the follwing is allowed:")
-    print("********************************************************************************\n"
-        "Xuz//wIAAADJvite60KPumY/m3gHwkQNgC9L9SWCIj0cRsYGpNyXEAgh74s2GTI1\n"
-        "VE5OVs8m+FwBFQ==\n"
-        "DONE.\n"
-        "********************************************************************************\n"
-        "2$^CSSH gwong2 to x.x.x.x\n")
-    print('-k | --keychain:\tStores your password (Keychain on macOS or Windows Credential Locker on Windows)')
+    print("\
+        ********************************************************************************\n\
+        Xuz//wIAAADJvite60KPumY/m3gHwkQNgC9L9SWCIj0cRsYGpNyXEAgh74s2GTI1\n\
+        VE5OVs8m+FwBFQ==\n\
+        DONE.\n\
+        ********************************************************************************\n\
+        2$^CSSH gwong2 to x.x.x.x\n")
+    print('-k | --keychain:\tStores your password (Keychain on macOS or Windows Credential Locker on Windows)\n')
 
 
 def get_challenge(challengeString):
     C1C2 = []
     if len(challengeString) == 2 or (len(challengeString) == 3 and challengeString[-1] == 'DONE.'):
-        if len(challengeString[0]) == 64 and len(challengeString[1]) in (14,16):
+        if len(challengeString[0]) == 64 and len(challengeString[1]) in range(14,17):
             C1C2.append(challengeString[0])
             C1C2.append(challengeString[1])
+            return C1C2
     else:
-        for line in challengeString:
-            if re.search(r"^\*", line):
-                continue
-            elif re.search(r"^DONE\.", line):
-                break
-            else:
-                C1C2.append(line)
-    return C1C2
+        if "DONE." in challengeString:
+            dindex = challengeString.index('DONE.')
+            if len(challengeString[dindex-1]) in range(14,17) and len(challengeString[dindex-2]) == 64:
+                C1C2.append(challengeString[dindex-2])
+                C1C2.append(challengeString[dindex-1])
+                return C1C2
+        else:
+            for line in challengeString:
+                if len(C1C2) == 2:
+                    break
+                elif re.search(r"^\*", line):
+                    pass
+                elif ' ' in line:
+                    pass
+                elif len(line) == 64 or len(line) in range(14,17):
+                    C1C2.append(line)
+            C1C2.sort(key=len, reverse=True)
+            if len(C1C2) == 2 and (len(C1C2[0]) == 64 and len(C1C2[1]) in range(14,17)):
+                 return C1C2
+        print(f"\nNo valid challenge string found.\n\t{C1C2}\n")
+        exit()
 
 
 def ssh_recv_ready(channel):
@@ -157,6 +172,7 @@ def main(argv):
         except KeyboardInterrupt:
             break
         else:
+            line = line.strip(' "\'\t\r\n')
             if line == "DONE.":
                 challengeString.append(line)
                 break
