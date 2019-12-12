@@ -6,6 +6,7 @@ import re
 import time
 import getopt
 import keychainz
+import pyperclip
 from getpass import getpass
 from random import randint
 from dotenv import load_dotenv
@@ -140,10 +141,17 @@ def send_command(server, user, passwd, C1, C2):
             n = n+1
     print('\n')
     os.system('cls' if sys.platform in ('win32', 'nt') else 'clear')
+    response = []
     for line in output.decode().split('\n'):
         if ' ~]$' not in line:
             print(line)
+            response.append(line)
     print('\n')
+    if os.getenv('clipboard'):
+        copypasta = '\n'.join(response)
+        copypasta = copypasta.split('*'*69)[1].strip()
+        pyperclip.copy(copypasta)
+        print(f'Copied {len(copypasta)} characters to clipboard.')
 
 
 def main(argv):
@@ -169,21 +177,39 @@ def main(argv):
     server = ts[randint(0,len(ts)-1)]
     print(f'Selected server: {server}')
     user = os.getlogin()
-    print("ctrl+c to end input. Including 'DONE.' also ends input (not required).\nInput challenge: ")
-    while True:
-        try:
-            line = input()
-        except KeyboardInterrupt:
-            break
-        else:
+    if os.getenv('clipboard'):
+        input = pyperclip.paste()
+        for line in input.split('\n'):
             line = line.strip(' "\'\t\r\n')
             if line == "DONE.":
-                challengeString.append(line)
-                break
-            elif line.strip() == "" or len(line) < 14:
-                continue
+                if len(challengeString) < 2:
+                    pass
+                else:
+                    challengeString.append(line)
+                    break
+            elif line == "" or len(line) < 14:
+                pass
             else:
                 challengeString.append(line)
+    else:
+        print("ctrl+c to end input. Including 'DONE.' also ends input (not required).\nInput challenge: ")
+        while True:
+            try:
+                line = input()
+            except KeyboardInterrupt:
+                break
+            else:
+                line = line.strip(' "\'\t\r\n')
+                if line == "DONE.":
+                    if len(challengeString) < 2:
+                        pass
+                    else:
+                        challengeString.append(line)
+                        break
+                elif line.strip() == "" or len(line) < 14:
+                    continue
+                else:
+                    challengeString.append(line)
     C1, C2 = get_challenge(challengeString)
 
     if keychainz.get_creds(__file__):
