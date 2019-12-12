@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import paramiko
 import os
+import sys
 import re
 import time
-import sys
 import getopt
 import keychainz
 from getpass import getpass
@@ -41,43 +41,81 @@ def get_challenge(challengeString):
 
 
 def ssh_recv_ready(channel):
-    while not channel.recv_ready():
-        time.sleep(5)    
+    n = 0
+    while not channel.recv_ready() or n < 3:
+        time.sleep(.1)
+        n = n+1
     output = channel.recv(9999)
     return output
 
 
-def send_command(server, user, passwd, C1, C2):
+def init_channel(server, user, passwd):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
+            print(f"Connecting to {server} as {user}")
             ssh.connect(hostname=server, username=user, password=passwd)
             break
-        except paramiko.ssh.exception.AuthenticationException:
+        except paramiko.ssh_exception.AuthenticationException:
             print("Check your password or try a different server.")
             passwd = getpass("Password: ")
         except:
             error = sys.exc_info()[0]
             print(error)
-    print(f"Logged into {server}")
+            exit()
+    print(f"Successfully logged into {server}")
     channel = ssh.invoke_shell()
-    ssh_recv_ready(channel)
-    print("Sending challenge.")
-    channel.send(f"/router/bin/ct_sign_client-1.0.1 -C1 {C1} -C2 {C2} -cec\n")
-    ssh_recv_ready(channel)
-    channel.send(passwd + "\n")
-    print("Waiting for challenge response.")
+    return channel
+
+def send_command(server, user, passwd, C1, C2):
+    channel = init_channel(server, user, passwd)
     output = ssh_recv_ready(channel)
-    while True:
-        try:
-            if not re.search(r"Response String", output.decode()):
-                output = ssh_recv_ready(channel)
-            else:
+    n = 0
+    ready = False
+    while not ready or n < 3:
+        for line in output.decode().split('\n'):
+            if re.search(r' ~]\$ ', line):
+                ready = True
                 break
-        except TypeError:
-            pass
-    ssh.close()
+        if ready:
+            break
+        else:
+            output = ssh_recv_ready(channel)
+            n = n+1
+    print('Sending challenge.')
+    channel.send(f"/router/bin/ct_sign_client-1.0.1 -C1 {C1} -C2 {C2} -cec\n")
+    output = ssh_recv_ready(channel)
+    ready = False
+    n = 0
+    while not ready or n < 3:
+        for line in output.decode().split('\n'):
+            if re.search(rf'{user} password:', line):
+                ready = True
+                break
+        if ready:
+            break
+        else:
+            output = ssh_recv_ready(channel)
+            n = n+1
+    print('Sending password')
+    channel.send(passwd + "\n\n")
+    output = ssh_recv_ready(channel)
+    print('Awaiting challenge response...')
+    result = False
+    n = 0
+    while not result or n < 3:
+        for line in output.decode().split('\n'):
+            if re.search(r'^Response String', line):
+                result = True
+                break
+        if result:
+            break
+        else:
+            output = ssh_recv_ready(channel)
+            n = n+1
+    print('\n')
+    os.system('cls' if sys.platform in ('win32', 'nt') else 'clear')
     for line in output.decode().split('\n'):
         if ' ~]$' not in line:
             print(line)
@@ -119,7 +157,7 @@ def main(argv):
             else:
                 challengeString.append(line)
     C1, C2 = get_challenge(challengeString)
-    print(f"\nssh {user}@{server}")
+    #print(f"\nssh {user}@{server}")
 
     if keychainz.get_creds(__file__):
         passwd = keychainz.get_creds(__file__)
