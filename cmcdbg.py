@@ -25,7 +25,6 @@ def print_help():
         "********************************************************************************\n"
         "2$^CSSH gwong2 to x.x.x.x\n")
     print('-k | --keychain:\tStores your password (Keychain on macOS or Windows Credential Locker on Windows)')
-    print("\n\nctrl+c to end input.\nInput challenge: ")
 
 
 def get_challenge(challengeString):
@@ -133,11 +132,12 @@ def main(argv):
             keychainz.set_creds(__file__)
         elif opt in ('-h', '--help'):
             print_help()
+            exit()
     challengeString = []
 
     if os.getenv('ts'):
         ts = os.getenv('ts').split(':')
-        print(f"Loaded servers {len(ts)} from env: {ts}")
+        print(f"\nLoaded servers {len(ts)} from env: {ts}")
     else:
         ts = input("Server: ")
     server = ts[randint(0,len(ts)-1)]
