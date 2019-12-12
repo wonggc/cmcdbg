@@ -51,6 +51,10 @@ def get_challenge(challengeString):
                 elif ' ' in line:
                     pass
                 elif len(line) == 64 or len(line) in range(14,17):
+                    if len(line) in range (14,16):
+                        offset = 16-len(line)
+                        pad = "=" * offset
+                        line = line+pad
                     C1C2.append(line)
             C1C2.sort(key=len, reverse=True)
             if len(C1C2) == 2 and (len(C1C2[0]) == 64 and len(C1C2[1]) in range(14,17)):
