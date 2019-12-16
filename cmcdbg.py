@@ -27,7 +27,7 @@ def print_help():
         ********************************************************************************\n\
         2$^CSSH gwong2 to x.x.x.x\n")
     print('-k | --keychain:\tStores your password (Keychain on macOS or Windows Credential Locker on Windows)\n')
-
+    print('-n | --noclip:\tManually disable clipboard usage\n')
 
 def get_challenge(challengeString):
     C1C2 = []
@@ -42,7 +42,6 @@ def get_challenge(challengeString):
             C1C2.append(challengeString[1])
             return C1C2
     else:
-        print(challengeString)
         for sindex, line in reversed(list(enumerate(challengeString))):
             if ' ' in line.strip():
                 del challengeString[sindex]
@@ -149,7 +148,7 @@ def send_command(server, user, passwd, C1, C2):
             print(line)
             response.append(line)
     print('\n')
-    if os.getenv('clipboard'):
+    if os.getenv('clipboard').lower() == 'true':
         copypasta = '\n'.join(response)
         copypasta = copypasta.split('*'*69)[1].strip()
         pyperclip.copy(copypasta)
@@ -176,14 +175,13 @@ def main(argv):
 
     if os.getenv('ts'):
         ts = os.getenv('ts').split(':')
-        print(f"\nLoaded servers {len(ts)} from env: {ts}")
+        print(f"\nLoaded {len(ts)} servers from env: {ts}")
     else:
         ts = input("Server: ")
     server = ts[randint(0,len(ts)-1)]
     print(f'Selected server: {server}')
     user = os.getlogin()
-    print(manual)
-    if manual == False and os.getenv('clipboard'):
+    if manual == False and os.getenv('clipboard').lower() == 'true':
         clippy = pyperclip.paste()
         for line in clippy.split('\n'):
             line = line.strip(' "\'\t\r\n')
