@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import paramiko
-import os
 import sys
 import re
 import time
@@ -9,7 +8,6 @@ import keychainz
 import pyperclip
 from getpass import getpass
 from random import randint
-from dotenv import load_dotenv
 
 
 def print_help():
@@ -109,8 +107,8 @@ def send_command(server, user, passwd, C1, C2):
         else:
             output = ssh_recv_ready(channel)
             n = n+1
-    print(f'Sending challenge: /router/bin/ct_sign_client-1.0.1 -C1 {C1} -C2 {C2} -cec')
-    channel.send(f"/router/bin/ct_sign_client-1.0.1 -C1 {C1} -C2 {C2} -cec\n")
+    print(f"Sending challenge: /router/bin/ct_sign_client-1.0.1 -C1 '{C1}' -C2 '{C2}' -cec")
+    channel.send(f"/router/bin/ct_sign_client-1.0.1 -C1 '{C1}' -C2 '{C2}' -cec\n")
     output = ssh_recv_ready(channel)
     ready = False
     n = 0
@@ -119,6 +117,9 @@ def send_command(server, user, passwd, C1, C2):
             if re.search(rf'{user} password:', line):
                 ready = True
                 break
+            if 'Invalid Challenge.' in line:
+                print(f"Is this an old challenge string? Ensure this is a recent challenge string.\n\t{C1}\n\t{C2}")
+                exit()
         if ready:
             break
         else:
@@ -156,7 +157,6 @@ def send_command(server, user, passwd, C1, C2):
 
 
 def main(argv):
-    load_dotenv()
     manual = False
     try:
         opts,args = getopt.getopt(sys.argv[1:], 'hkn', ['keychain', 'help', 'noclip'])
@@ -181,7 +181,33 @@ def main(argv):
     server = ts[randint(0,len(ts)-1)]
     print(f'Selected server: {server}')
     user = os.getlogin()
-    if manual == False and os.getenv('clipboard').lower() == 'true':
+
+    if ImageGrab.grabclipboard():
+        challenge_image = ImageGrab.grabclipboard()
+        print(f'Found image {challenge_image}')
+        text = pt.image_to_string(cv2.cvtColor(nm.array(challenge_image), cv2.COLOR_BGR2GRAY))
+        #text = pt.image_to_string(challenge_image)
+        text = text.split('\n')
+        #for index, line in enumerate(text):
+            #if 'DONE.' in line:
+                 #start = index
+                 #break
+        for line in text:
+            if line == 'DONE.':
+                if len(challengeString) < 2:
+                    pass
+                else:
+                    challengeString.append(line)
+                    break
+            elif ' ' in line:
+                line = line.replace(' ', '')
+                challengeString.append(line)
+            elif line == "" or len(line) < 14 or line == 'e'*14:
+                pass
+            else:
+                challengeString.append(line.strip())
+        print(f'Using {challengeString}')
+    elif manual == False and os.getenv('clipboard').lower() == 'true':
         clippy = pyperclip.paste()
         for line in clippy.split('\n'):
             line = line.strip(' "\'\t\r\n')
@@ -228,4 +254,16 @@ def main(argv):
 
 
 if __name__=="__main__":
+    from dotenv import load_dotenv
+    import os
+    load_dotenv()
+    if os.getenv('ocr'):
+        try:
+            import pytesseract as pt
+            from PIL import Image, ImageGrab
+            import numpy as nm
+            import cv2
+        except ImportError:
+            print('OCR enabled, but pytesseract not found. Ensure it is installed with `pip list`. Proceeding without OCR')
+            pass
     main(sys.argv[1:])
