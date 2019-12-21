@@ -31,3 +31,6 @@ Automatic clipboard copy from/to can be enabled with '.env' variable 'clipboard=
 
 > clipboard=True
 
+## Example
+Link to video:
+[![YouTube cmcdbg demo](https://img.youtube.com/vi/yVuKrWEume0/maxresdefault.jpg)](https://www.youtube.com/watch?v=yVuKrWEume0)
