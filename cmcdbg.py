@@ -41,6 +41,10 @@ def get_challenge(challengeString):
                 challengeString[1] = challengeString[1] + pad
             C1C2.append(challengeString[1])
             return C1C2
+        elif len(challengeString[0]) == 64 and len(challengeString[1]) == 32:
+            C1C2.append(challengeString[0])
+            C1C2.append(challengeString[1])
+            return C1C2
     else:
         for sindex, line in reversed(list(enumerate(challengeString))):
             if ' ' in line.strip():
@@ -51,7 +55,7 @@ def get_challenge(challengeString):
                 break
             elif re.search(r"^\*", line):
                 pass
-            elif len(line) == 64 or len(line) in range(14,17):
+            elif len(line) == 64 or len(line) in range(14,17) or len(line) == 32:
                 if len(line) in range (14,16):
                     offset = 16-len(line)
                     pad = "=" * offset
